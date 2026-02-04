@@ -1,0 +1,23 @@
+# Render Blueprint for Expense Tracker Backend
+# Optional: Makes deployment easier by pre-configuring service
+
+services:
+  - type: web
+    name: expense-tracker-api
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build && npx prisma generate
+    startCommand: npm run migrate && npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        sync: false  # Must be set manually with Supabase URL
+      - key: DIRECT_URL
+        sync: false  # Must be set manually with Supabase URL
+      - key: CORS_ORIGIN
+        value: "*"  # Update after frontend deployment

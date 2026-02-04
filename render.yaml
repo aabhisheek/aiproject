@@ -1,0 +1,25 @@
+# Render Blueprint for Monorepo Deployment
+# Place this file at the ROOT of your repository
+
+services:
+  # Backend API Service
+  - type: web
+    name: expense-tracker-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: backend  # ⭐ Tells Render to use backend/ folder
+    buildCommand: npm install && npx prisma generate --schema=./src/prisma/schema.prisma && npm run build
+    startCommand: npx prisma migrate deploy --schema=./src/prisma/schema.prisma && npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        sync: false  # Set manually in Render dashboard
+      - key: DIRECT_URL
+        sync: false  # Set manually in Render dashboard
+      - key: CORS_ORIGIN
+        value: "*"  # Update after frontend deployment
