@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(npx ts-node-dev:*)",
+      "Bash(taskkill:*)"
+    ]
+  }
+}

@@ -76,8 +76,15 @@ export function validateCreateExpense(
     const trimmedCategory = category.trim();
     if (trimmedCategory === '') {
       errors.push('Category cannot be empty');
-    } else if (!ALLOWED_CATEGORIES.includes(trimmedCategory)) {
-      errors.push(`Category must be one of: ${ALLOWED_CATEGORIES.join(', ')}`);
+    } else if (trimmedCategory.length < 2) {
+      errors.push('Category must be at least 2 characters');
+    } else if (trimmedCategory.length > 50) {
+      errors.push('Category must be 50 characters or less');
+    }
+    // XSS prevention for custom categories
+    const suspiciousCategoryPatterns = /<script|javascript:|onerror=|onclick=/i;
+    if (trimmedCategory && suspiciousCategoryPatterns.test(trimmedCategory)) {
+      errors.push('Category contains invalid characters');
     }
   }
 
@@ -174,8 +181,8 @@ export function validateGetExpenses(
   if (category !== undefined) {
     if (typeof category !== 'string') {
       errors.push('Category must be a string');
-    } else if (!ALLOWED_CATEGORIES.includes(category)) {
-      errors.push(`Category must be one of: ${ALLOWED_CATEGORIES.join(', ')}`);
+    } else if (category.trim().length === 0) {
+      errors.push('Category filter cannot be empty');
     }
   }
 

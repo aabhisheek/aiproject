@@ -17,6 +17,7 @@ export function ExpenseForm() {
   // Form state
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
+  const [customCategory, setCustomCategory] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(getTodayDate());
   
@@ -39,8 +40,9 @@ export function ExpenseForm() {
       validationErrors.amount = 'Amount must be a positive number with max 2 decimals';
     }
     
-    if (!category.trim()) {
-      validationErrors.category = 'Category is required';
+    const finalCategory = category === 'Other' ? customCategory.trim() : category.trim();
+    if (!finalCategory) {
+      validationErrors.category = category === 'Other' ? 'Please enter a custom category name' : 'Category is required';
     }
     
     if (!description.trim()) {
@@ -59,7 +61,7 @@ export function ExpenseForm() {
     // Prepare data
     const data: CreateExpenseDTO = {
       amount: amount.trim(),
-      category: category.trim(),
+      category: finalCategory,
       description: description.trim(),
       date,
     };
@@ -76,6 +78,7 @@ export function ExpenseForm() {
           // Reset form
           setAmount('');
           setCategory('');
+          setCustomCategory('');
           setDescription('');
           setDate(getTodayDate());
           setErrors({});
@@ -125,7 +128,10 @@ export function ExpenseForm() {
           <select
             id="category"
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            onChange={(e) => {
+              setCategory(e.target.value);
+              if (e.target.value !== 'Other') setCustomCategory('');
+            }}
             disabled={isLoading}
             className={`input ${errors.category ? 'border-red-500' : ''}`}
           >
@@ -138,6 +144,17 @@ export function ExpenseForm() {
             <option value="Shopping">Shopping</option>
             <option value="Other">Other</option>
           </select>
+          {category === 'Other' && (
+            <input
+              type="text"
+              placeholder="Enter custom category name"
+              value={customCategory}
+              onChange={(e) => setCustomCategory(e.target.value)}
+              disabled={isLoading}
+              maxLength={50}
+              className={`input mt-2 ${errors.category ? 'border-red-500' : ''}`}
+            />
+          )}
           {errors.category && (
             <p className="text-red-500 text-sm mt-1">{errors.category}</p>
           )}

@@ -9,6 +9,17 @@ import { CreateExpenseDTO, ExpenseResponse, QueryParams } from '../types/expense
 
 const prisma = new PrismaClient();
 
+/**
+ * Normalizes a category string to Title Case for consistent storage.
+ * e.g. "school" -> "School", "FOOD" -> "Food", "health care" -> "Health Care"
+ */
+function normalizeCategory(category: string): string {
+  return category
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 export class ExpenseService {
   /**
    * Creates a new expense
@@ -18,7 +29,7 @@ export class ExpenseService {
     const expense = await prisma.expense.create({
       data: {
         amount: new Prisma.Decimal(data.amount), // Convert string to Decimal
-        category: data.category.trim(),
+        category: normalizeCategory(data.category),
         description: data.description.trim(),
         date: new Date(data.date),
       },
@@ -37,10 +48,13 @@ export class ExpenseService {
     const { category, sort } = params;
 
     const where: any = {};
-    
-    // Apply category filter if provided
+
+    // Apply category filter (case-insensitive)
     if (category) {
-      where.category = category;
+      where.category = {
+        equals: category,
+        mode: 'insensitive',
+      };
     }
 
     // Build orderBy clause
@@ -67,7 +81,7 @@ export class ExpenseService {
     return {
       id: expense.id,
       amount: expense.amount.toString(), // Decimal to string - CRITICAL for money precision
-      category: expense.category,
+      category: normalizeCategory(expense.category),
       description: expense.description,
       date: expense.date.toISOString().split('T')[0], // YYYY-MM-DD format
       createdAt: expense.createdAt.toISOString(),
@@ -86,7 +100,16 @@ export class ExpenseService {
       orderBy: { category: 'asc' },
     });
 
-    return result.map((r) => r.category);
+    // Deduplicate case variants: "school", "School", "SCHOOL" -> "School"
+    const seen = new Map<string, string>();
+    for (const r of result) {
+      const key = r.category.toLowerCase();
+      if (!seen.has(key)) {
+        seen.set(key, normalizeCategory(r.category));
+      }
+    }
+
+    return Array.from(seen.values()).sort();
   }
 
   /**
@@ -101,26 +124,26 @@ export class ExpenseService {
       },
     });
 
-    // Group by category and calculate totals
-    const summaryMap = new Map<string, { total: number; count: number }>();
+    // Group by category (case-insensitive) and calculate totals
+    const summaryMap = new Map<string, { displayName: string; total: number; count: number }>();
 
     for (const expense of expenses) {
-      const category = expense.category;
+      const key = expense.category.toLowerCase();
       const amount = parseFloat(expense.amount.toString());
 
-      if (!summaryMap.has(category)) {
-        summaryMap.set(category, { total: 0, count: 0 });
+      if (!summaryMap.has(key)) {
+        summaryMap.set(key, { displayName: normalizeCategory(expense.category), total: 0, count: 0 });
       }
 
-      const current = summaryMap.get(category)!;
+      const current = summaryMap.get(key)!;
       current.total += amount;
       current.count += 1;
     }
 
     // Convert to array and format
-    const summary = Array.from(summaryMap.entries())
-      .map(([category, data]) => ({
-        category,
+    const summary = Array.from(summaryMap.values())
+      .map((data) => ({
+        category: data.displayName,
         total: data.total.toFixed(2), // Convert to string for precision
         count: data.count,
       }))
